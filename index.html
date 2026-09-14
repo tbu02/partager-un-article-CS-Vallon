@@ -17,6 +17,8 @@
     <!-- items injected by JS -->
   </div>
 
+  <textarea id="csv-copy-src" readonly style="position:absolute; left:-9999px; top:-9999px;"></textarea>
+
 </div>
 
 <script>
@@ -27,6 +29,7 @@
 
   var btn = document.getElementById('csv-share-btn');
   var menu = document.getElementById('csv-share-menu');
+  var copySrc = document.getElementById('csv-copy-src');
 
   if (!articleUrl) {
     btn.textContent = 'Lien manquant';
@@ -35,11 +38,25 @@
     return;
   }
 
+  copySrc.value = articleUrl;
+
   function itemStyle() {
     return 'display:flex; align-items:center; gap:8px; width:100%; box-sizing:border-box; background:none; border:0; border-radius:8px; padding:10px 12px; font-size:14px; font-weight:600; font-family:inherit; color:#1a1a1a; cursor:pointer; text-align:left; text-decoration:none;';
   }
 
   function closeMenu() { menu.style.display = 'none'; }
+
+  function legacyCopy() {
+    copySrc.style.left = '0px';
+    copySrc.style.top = '0px';
+    copySrc.focus();
+    copySrc.select();
+    var ok = false;
+    try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+    copySrc.style.left = '-9999px';
+    copySrc.style.top = '-9999px';
+    return ok;
+  }
 
   function buildMenu() {
     var encodedUrl = encodeURIComponent(articleUrl);
@@ -70,19 +87,15 @@
 
       if (item.action === 'copy') {
         el.addEventListener('click', function () {
-          navigator.clipboard.writeText(articleUrl).then(function () {
-            el.textContent = '\u2713 Lien copi\u00e9 !';
-            setTimeout(function () { el.textContent = item.label; closeMenu(); }, 1500);
-          }).catch(function () {
-            el.textContent = 'Copie impossible ici';
-          });
+          var ok = legacyCopy();
+          el.textContent = ok ? '\u2713 Lien copi\u00e9 !' : 'Copie impossible ici';
+          setTimeout(function () { el.textContent = item.label; closeMenu(); }, 1500);
         });
       } else if (item.action === 'instagram') {
         el.addEventListener('click', function () {
-          navigator.clipboard.writeText(articleUrl).then(function () {
-            alert("Lien copi\u00e9 ! Ouvre Instagram, cr\u00e9e une story et colle le lien (sticker \u00ab lien \u00bb).");
-            closeMenu();
-          });
+          legacyCopy();
+          alert("Lien copi\u00e9 ! Ouvre Instagram, cr\u00e9e une story et colle le lien (sticker \u00ab lien \u00bb).");
+          closeMenu();
         });
       } else {
         el.addEventListener('click', closeMenu);
@@ -94,12 +107,8 @@
 
   buildMenu();
 
-  btn.addEventListener('click', function (e) {
-    if (navigator.share) {
-      navigator.share({ title: articleTitle, url: articleUrl }).catch(function () {});
-    } else {
-      menu.style.display = (menu.style.display === 'none' || !menu.style.display) ? 'flex' : 'none';
-    }
+  btn.addEventListener('click', function () {
+    menu.style.display = (menu.style.display === 'none' || !menu.style.display) ? 'flex' : 'none';
   });
 
   document.addEventListener('click', function (e) {
